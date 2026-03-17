@@ -702,7 +702,7 @@ function sendNotificationEmail(d) {
     'Meeting-Wuensche: ' + (d.meetingWishes||'-') + '\n\n' +
     'NOTIZEN\n' +
     (d.notes||'-') + '\n\n' +
-    'Dashboard: https://gilded-bublanina-d1c21b.netlify.app (Passwort: 0810)';
+    'Dashboard: https://statuesque-dodol-25a36d.netlify.app/#dashboard (Passwort: 0810)';
 
   fetch('https://formspree.io/f/xnjggrdn', {
     method: 'POST',
@@ -728,6 +728,20 @@ function showToast(msg) {
 }
 
 // Demo lead
+// Auto-open dashboard if URL has #dashboard hash
+if (window.location.hash === '#dashboard') {
+  var pw = prompt('Bitte Passwort eingeben:');
+  if (pw === '0810') {
+    document.querySelectorAll('.view').forEach(function(v){v.classList.remove('active');});
+    document.getElementById('view-dash').classList.add('active');
+    document.getElementById('tab-form') && document.getElementById('tab-form').classList.remove('active');
+    document.querySelectorAll('.tab-btn').forEach(function(b){
+      if (b.textContent.indexOf('Dashboard') > -1) b.classList.add('active');
+    });
+    loadLeadsFromDB();
+  }
+}
+
 leads.push({
   id: 999, eventType: 'teambuilding', firstName: 'Sandra', lastName: 'Weber',
   company: 'Bosch GmbH', position: 'HR Manager', contactEmail: 'weber@bosch.de',
