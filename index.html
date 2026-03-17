@@ -124,6 +124,16 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 20px;
 .modal-input { width: 100%; background: rgba(255,255,255,0.06); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; color: var(--white); font-family: 'DM Sans', sans-serif; font-size: 13px; outline: none; }
 .modal-textarea { min-height: 280px; resize: vertical; }
 .modal-footer { padding: 16px 28px 24px; display: flex; gap: 10px; justify-content: flex-end; }
+.status-select {
+  padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;
+  border: none; cursor: pointer; outline: none; font-family: "DM Sans", sans-serif;
+  appearance: none; -webkit-appearance: none;
+}
+.status-offen { background: rgba(255,100,100,0.15); color: #ff9a9a; border: 1px solid rgba(255,100,100,0.3); }
+.status-inarbeit { background: rgba(255,180,50,0.15); color: #ffd080; border: 1px solid rgba(255,180,50,0.3); }
+.status-gesendet { background: rgba(80,140,200,0.15); color: #90c0f0; border: 1px solid rgba(80,140,200,0.3); }
+.status-erledigt { background: rgba(61,122,82,0.2); color: #7ec89a; border: 1px solid rgba(61,122,82,0.4); }
+
 .toast { position: fixed; bottom: 28px; right: 28px; z-index: 999; background: var(--green-mid); border: 1px solid var(--border-gold); border-radius: 12px; padding: 14px 20px; font-size: 13px; color: var(--gold); transform: translateY(80px); opacity: 0; transition: all 0.3s; }
 .toast.show { transform: translateY(0); opacity: 1; }
 @media (max-width: 640px) {
@@ -418,6 +428,8 @@ function askPassword(btn) {
   var pw = prompt('Bitte Passwort eingeben:');
   if (pw === '0810') {
     switchView('dash', btn);
+    leads = []; // clear local cache
+    renderLeads(); // show loading state
     loadLeadsFromDB();
   } else if (pw !== null) {
     alert('Falsches Passwort.');
@@ -542,6 +554,12 @@ function renderLeads() {
             (l.groupSize ? '<span class="tag green">'+l.groupSize+'</span>' : '') +
             (l.budget ? '<span class="tag blue">'+parseInt(l.budget).toLocaleString('de-DE')+' \u20ac</span>' : '') +
           '</div>' +
+          '<select class="status-select status-'+(l.status||'offen')+'" onchange="updateStatus('+l.id+',this)" onclick="event.stopPropagation()">' +
+            '<option value="offen"'+((!l.status||l.status==='offen')?' selected':'')+'>&#128308; Offen</option>' +
+            '<option value="inarbeit"'+(l.status==='inarbeit'?' selected':'')+'>&#128992; In Arbeit</option>' +
+            '<option value="gesendet"'+(l.status==='gesendet'?' selected':'')+'>&#128309; Angebot gesendet</option>' +
+            '<option value="erledigt"'+(l.status==='erledigt'?' selected':'')+'>&#128994; Erledigt</option>' +
+          '</select>' +
         '</div>' +
         '<div class="lead-meta"><div class="lead-meta-item"><div class="lead-meta-val">'+dateStr+'</div><div class="lead-meta-label">Datum</div></div></div>' +
         '<div class="lead-chevron">&#9662;</div>' +
@@ -578,6 +596,22 @@ function renderLeads() {
       '</div>' +
     '</div>';
   }).join('');
+}
+
+function updateStatus(id, select) {
+  var l = leads.find(function(x){return x.id===id;});
+  if (!l) return;
+  l.status = select.value;
+  // Update select color class
+  select.className = 'status-select status-' + select.value;
+  // Save updated lead
+  fetch('/.netlify/functions/save-lead', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({action:'update', lead: l})
+  }).then(function(r){
+    if(r.ok) showToast('Status aktualisiert!');
+  });
 }
 
 function toggleLead(id) { document.getElementById('lc-'+id).classList.toggle('open'); }
@@ -734,23 +768,16 @@ if (window.location.hash === '#dashboard') {
   if (pw === '0810') {
     document.querySelectorAll('.view').forEach(function(v){v.classList.remove('active');});
     document.getElementById('view-dash').classList.add('active');
-    document.getElementById('tab-form') && document.getElementById('tab-form').classList.remove('active');
     document.querySelectorAll('.tab-btn').forEach(function(b){
       if (b.textContent.indexOf('Dashboard') > -1) b.classList.add('active');
+      else b.classList.remove('active');
     });
+    leads = [];
+    renderLeads();
     loadLeadsFromDB();
   }
 }
 
-leads.push({
-  id: 999, eventType: 'teambuilding', firstName: 'Sandra', lastName: 'Weber',
-  company: 'Bosch GmbH', position: 'HR Manager', contactEmail: 'weber@bosch.de',
-  phone: '+49 721 123456', eventDate: '2026-04-15', eventDate2: '2026-04-22',
-  groupSize: '20-40', duration: 'halbtag', budget: '4000',
-  catering: 'ja', cateringStyle: 'gutbuergerlich', cateringFormat: 'buffet',
-  meetingWishes: '', notes: 'Team von 25 Personen, viele Golf-Anfänger',
-  source: 'google', submittedAt: new Date().toISOString()
-});
 renderLeads();
 </script>
 </body>
